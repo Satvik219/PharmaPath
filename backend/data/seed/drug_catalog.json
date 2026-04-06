@@ -1,0 +1,96 @@
+{
+  "drugs": [
+    {
+      "drug_id": "DB00316",
+      "name": "Acetaminophen",
+      "generic_name": "Acetaminophen",
+      "drug_class": "Analgesic",
+      "form": "Tablet",
+      "half_life": "2h",
+      "metabolism": "Hepatic glucuronidation",
+      "max_dose": "4000 mg/day",
+      "contraindications": ["Severe liver disease"],
+      "alternatives": ["DB01050"]
+    },
+    {
+      "drug_id": "DB00945",
+      "name": "Warfarin",
+      "generic_name": "Warfarin",
+      "drug_class": "Anticoagulant",
+      "form": "Tablet",
+      "half_life": "40h",
+      "metabolism": "CYP2C9",
+      "max_dose": "Individualized",
+      "contraindications": ["Active bleeding"],
+      "alternatives": ["DB01219"]
+    },
+    {
+      "drug_id": "DB01219",
+      "name": "Apixaban",
+      "generic_name": "Apixaban",
+      "drug_class": "Anticoagulant",
+      "form": "Tablet",
+      "half_life": "12h",
+      "metabolism": "CYP3A4",
+      "max_dose": "5 mg BID",
+      "contraindications": ["Active bleeding"],
+      "alternatives": []
+    },
+    {
+      "drug_id": "DB01050",
+      "name": "Ibuprofen",
+      "generic_name": "Ibuprofen",
+      "drug_class": "NSAID",
+      "form": "Tablet",
+      "half_life": "2h",
+      "metabolism": "Hepatic oxidation",
+      "max_dose": "3200 mg/day",
+      "contraindications": ["GI bleeding"],
+      "alternatives": ["DB00316"]
+    },
+    {
+      "drug_id": "DB00472",
+      "name": "Metformin",
+      "generic_name": "Metformin",
+      "drug_class": "Biguanide",
+      "form": "Tablet",
+      "half_life": "6h",
+      "metabolism": "Renally cleared",
+      "max_dose": "2000 mg/day",
+      "contraindications": ["Severe renal impairment"],
+      "alternatives": []
+    }
+  ],
+  "interactions": [
+    {
+      "source": "DB00945",
+      "target": "DB01050",
+      "weight": 0.92,
+      "severity_label": "contraindicated",
+      "interaction_type": "Bleeding risk",
+      "description": "Warfarin combined with ibuprofen substantially increases bleeding risk.",
+      "source_refs": ["PMID123"],
+      "bidirectional": true
+    },
+    {
+      "source": "DB00945",
+      "target": "DB00316",
+      "weight": 0.24,
+      "severity_label": "minor",
+      "interaction_type": "INR monitoring",
+      "description": "Acetaminophen may modestly influence INR at repeated high dose exposure.",
+      "source_refs": ["PMID124"],
+      "bidirectional": true
+    },
+    {
+      "source": "DB00472",
+      "target": "DB01050",
+      "weight": 0.58,
+      "severity_label": "moderate",
+      "interaction_type": "Renal function burden",
+      "description": "NSAID exposure may increase renal stress when combined with metformin.",
+      "source_refs": ["PMID125"],
+      "bidirectional": true
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.env
+.env.local
+backend/.env
+node_modules/
+dist/
+build/
+.DS_Store
+backend/data/*.sqlite3
+backend/data/*.db
+backend/data/cache/*.pkl
+backend/data/cache/*.json
+!backend/data/cache/.gitkeep

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PharmaPath Live Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <p class="eyebrow">Medication Interaction Navigator</p>
+        <h1>PharmaPath</h1>
+        <p class="hero-copy">
+          Enter medicine names like Warfarin or Ibuprofen, or paste medication IDs if you already have them.
+          The result will explain what you should do next in simple language.
+        </p>
+        <p class="status-banner" id="status">Bootstrapping demo session...</p>
+      </section>
+
+      <section class="workspace-grid">
+        <form class="panel form-grid" id="interaction-form">
+          <div class="panel-header">
+            <p class="eyebrow">Clinical Input</p>
+            <h2>Tell us the medicines</h2>
+          </div>
+
+          <label>
+            Medicine names or medication IDs
+            <textarea id="medications" rows="3">Warfarin, Ibuprofen</textarea>
+          </label>
+          <p class="helper-text">Examples: Warfarin, Metformin, Ibuprofen, DB00945</p>
+
+          <div class="two-up">
+            <label>
+              Age
+              <input id="age" value="74" />
+            </label>
+            <label>
+              Weight (kg)
+              <input id="weight" value="48" />
+            </label>
+          </div>
+
+          <div class="two-up">
+            <label>
+              Liver function
+              <input id="liver-function" value="reduced" />
+            </label>
+            <label>
+              Renal function
+              <input id="renal-function" value="impaired" />
+            </label>
+          </div>
+
+          <label>
+            Conditions
+            <input id="conditions" value="diabetes" />
+          </label>
+
+          <button type="submit">Check Interactions</button>
+        </form>
+
+        <section class="panel" id="results-panel">
+          <div class="panel-header">
+            <p class="eyebrow">Results</p>
+            <h2>Waiting for your medicines</h2>
+          </div>
+          <p>Press <strong>Check Interactions</strong> and the app will tell you what to do next and why.</p>
+        </section>
+      </section>
+
+      <section class="panel graph-panel" id="graph-panel">
+        <div class="panel-header">
+          <p class="eyebrow">Graph View</p>
+          <h2>D3-ready Subgraph</h2>
+        </div>
+        <p>The API will return graph nodes and edges here once the interaction check completes.</p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

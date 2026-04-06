@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    command: python -m pharmapath.app
+    ports:
+      - "5000:5000"
+    environment:
+      PHARMAPATH_SECRET_KEY: development-secret
+      PHARMAPATH_DATABASE_PATH: /app/data/pharmapath.db
+    volumes:
+      - ./backend/data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000/api
+    depends_on:
+      - backend
+
