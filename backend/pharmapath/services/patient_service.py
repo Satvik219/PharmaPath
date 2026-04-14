@@ -38,7 +38,19 @@ class PatientService:
 
     def update(self, patient_id: str, payload: dict) -> dict:
         now = utc_now_iso()
-        self.repo.update(patient_id, {"updated_at": now, **payload})
+        existing = self.repo.get(patient_id) or {}
+        merged = {
+            "dob": payload.get("dob", existing.get("dob")),
+            "weight_kg": payload.get("weight_kg", existing.get("weight_kg")),
+            "conditions": payload.get("conditions", existing.get("conditions", [])),
+            "allergies": payload.get("allergies", existing.get("allergies", [])),
+            "current_medications": payload.get(
+                "current_medications",
+                payload.get("medications", existing.get("current_medications", [])),
+            ),
+            "updated_at": now,
+        }
+        self.repo.update(patient_id, merged)
         return {"patient_id": patient_id, "updated_at": now}
 
     def history(self, patient_id: str) -> dict:
@@ -48,4 +60,3 @@ class PatientService:
         deleted_at = utc_now_iso()
         self.repo.soft_delete(patient_id, deleted_at)
         return {"success": True, "deleted_at": deleted_at}
-

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import heapq
+from collections.abc import Callable
 
 import networkx as nx
 
@@ -11,14 +12,14 @@ class AlternativeSearchService:
     def __init__(self, client: DrugBankClient) -> None:
         self.client = client
 
-    def find_alternatives(self, graph: nx.DiGraph, medications: list[str]) -> list[dict]:
-        severe = any(
-            graph.has_edge(a, b) and graph[a][b]["weight"] > 0.8
-            for a in medications
-            for b in medications
-            if a != b
-        )
-        if not severe:
+    def find_alternatives(
+        self,
+        graph: nx.DiGraph,
+        medications: list[str],
+        scorer: Callable[[list[str]], dict],
+    ) -> list[dict]:
+        baseline = scorer(medications)
+        if baseline["risk_score"] < 35:
             return []
 
         proposals = []
@@ -26,18 +27,27 @@ class AlternativeSearchService:
             drug = self.client.get(drug_id)
             if not drug:
                 continue
-            alternatives = drug.get("alternatives", [])
-            for candidate in alternatives:
+            for candidate in drug.get("alternatives", []):
+                if candidate in medications or not graph.has_node(candidate):
+                    continue
                 proposed = [candidate if current == drug_id else current for current in medications]
-                score = self._regimen_risk(graph, proposed)
+                assessment = scorer(proposed)
+                improvement = round(baseline["risk_score"] - assessment["risk_score"], 1)
+                if improvement <= 0:
+                    continue
                 heapq.heappush(
                     proposals,
                     (
-                        score,
+                        assessment["risk_score"],
                         {
                             "medications": proposed,
-                            "total_risk_score": round(score, 3),
-                            "path_explanation": f"Replaced {drug_id} with {candidate} to reduce cumulative interaction risk.",
+                            "total_risk_score": assessment["risk_score"],
+                            "severity": assessment["severity"],
+                            "risk_reduction": improvement,
+                            "path_explanation": (
+                                f"Replacing {self._drug_name(drug_id)} with {self._drug_name(candidate)} "
+                                f"reduces the regimen risk by {improvement} points."
+                            ),
                         },
                     ),
                 )
@@ -49,13 +59,6 @@ class AlternativeSearchService:
                 ranked.append(item)
         return ranked
 
-    def _regimen_risk(self, graph: nx.DiGraph, medications: list[str]) -> float:
-        total = 0.0
-        for source in medications:
-            for target in medications:
-                if source == target:
-                    continue
-                if graph.has_edge(source, target):
-                    total += graph[source][target]["weight"]
-        return total
-
+    def _drug_name(self, drug_id: str) -> str:
+        drug = self.client.get(drug_id)
+        return drug["name"] if drug else drug_id

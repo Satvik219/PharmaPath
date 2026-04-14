@@ -26,3 +26,5 @@ class Config:
         str(DATA_DIR / "seed" / "india_medicine_catalog.json"),
     )
     OPENFDA_API_KEY = os.getenv("OPENFDA_API_KEY", "")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")

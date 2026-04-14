@@ -43,17 +43,20 @@ class PatientRepository:
             return self._deserialize(row)
 
     def update(self, patient_id: str, updates: dict) -> None:
+        medications = updates.get("current_medications", updates.get("medications", []))
         with get_connection(self.database_path) as connection:
             connection.execute(
                 """
                 UPDATE patients
-                SET weight_kg = ?, conditions = ?, current_medications = ?, updated_at = ?
+                SET dob = ?, weight_kg = ?, conditions = ?, allergies = ?, current_medications = ?, updated_at = ?
                 WHERE id = ?
                 """,
                 (
+                    updates.get("dob"),
                     updates.get("weight_kg"),
                     json.dumps(updates.get("conditions", [])),
-                    json.dumps(updates.get("medications", [])),
+                    json.dumps(updates.get("allergies", [])),
+                    json.dumps(medications),
                     updates["updated_at"],
                     patient_id,
                 ),
@@ -76,4 +79,3 @@ class PatientRepository:
         item["allergies"] = json.loads(item["allergies"] or "[]")
         item["current_medications"] = json.loads(item["current_medications"] or "[]")
         return item
-

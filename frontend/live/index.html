@@ -18,64 +18,85 @@
         <p class="status-banner" id="status">Bootstrapping demo session...</p>
       </section>
 
-      <section class="workspace-grid">
-        <form class="panel form-grid" id="interaction-form">
-          <div class="panel-header">
-            <p class="eyebrow">Clinical Input</p>
-            <h2>Tell us the medicines</h2>
-          </div>
+      <section class="dashboard-grid">
+        <aside class="assistant-column">
+          <form class="panel form-grid" id="interaction-form">
+            <div class="panel-header">
+              <p class="eyebrow">Clinical Input</p>
+              <h2>Tell us the medicines</h2>
+            </div>
 
-          <label>
-            Medicine names or medication IDs
-            <textarea id="medications" rows="3">Warfarin, Ibuprofen</textarea>
-          </label>
-          <p class="helper-text">Examples: Warfarin, Metformin, Ibuprofen, DB00945</p>
-
-          <div class="two-up">
             <label>
-              Age
-              <input id="age" value="74" />
+              Medicine names or medication IDs
+              <textarea id="medications" rows="3">Warfarin, Ibuprofen</textarea>
             </label>
+            <p class="helper-text">Examples: Warfarin, Metformin, Ibuprofen, DB00945</p>
+
+            <div class="two-up">
+              <label>
+                Age
+                <input id="age" value="74" />
+              </label>
+              <label>
+                Weight (kg)
+                <input id="weight" value="48" />
+              </label>
+            </div>
+
+            <div class="two-up">
+              <label>
+                Liver function
+                <input id="liver-function" value="reduced" />
+              </label>
+              <label>
+                Renal function
+                <input id="renal-function" value="impaired" />
+              </label>
+            </div>
+
             <label>
-              Weight (kg)
-              <input id="weight" value="48" />
+              Conditions
+              <input id="conditions" value="diabetes" />
             </label>
-          </div>
 
-          <div class="two-up">
-            <label>
-              Liver function
-              <input id="liver-function" value="reduced" />
-            </label>
-            <label>
-              Renal function
-              <input id="renal-function" value="impaired" />
-            </label>
-          </div>
+            <button type="submit">Check Interactions</button>
+          </form>
 
-          <label>
-            Conditions
-            <input id="conditions" value="diabetes" />
-          </label>
+          <section class="panel chat-panel" id="chat-panel">
+            <div class="panel-header">
+              <p class="eyebrow">Conversational AI</p>
+              <h2>Ask a follow-up question</h2>
+            </div>
+            <div class="chat-log" id="chat-log">
+              <p class="chat-placeholder">
+                Run an interaction check first, then ask things like "Why is this dangerous?"
+                or "What if I remove Ibuprofen?"
+              </p>
+            </div>
+            <form class="chat-form" id="chat-form">
+              <textarea id="chat-input" rows="3" placeholder="Ask a follow-up question..."></textarea>
+              <button type="submit">Ask PharmaPath</button>
+            </form>
+          </section>
+        </aside>
 
-          <button type="submit">Check Interactions</button>
-        </form>
+        <section class="results-column">
+          <section class="panel" id="results-panel">
+            <div class="panel-header">
+              <p class="eyebrow">Results</p>
+              <h2>Waiting for your medicines</h2>
+            </div>
+            <p>Press <strong>Check Interactions</strong> and the app will tell you what to do next and why.</p>
+          </section>
 
-        <section class="panel" id="results-panel">
-          <div class="panel-header">
-            <p class="eyebrow">Results</p>
-            <h2>Waiting for your medicines</h2>
-          </div>
-          <p>Press <strong>Check Interactions</strong> and the app will tell you what to do next and why.</p>
+          <section class="panel graph-panel" id="graph-panel">
+            <div class="panel-header">
+              <p class="eyebrow">Graph View</p>
+              <h2>D3-ready Subgraph</h2>
+            </div>
+            <p>The API will return graph nodes and edges here once the interaction check completes.</p>
+          </section>
         </section>
-      </section>
-
-      <section class="panel graph-panel" id="graph-panel">
-        <div class="panel-header">
-          <p class="eyebrow">Graph View</p>
-          <h2>D3-ready Subgraph</h2>
-        </div>
-        <p>The API will return graph nodes and edges here once the interaction check completes.</p>
       </section>
     </main>
 

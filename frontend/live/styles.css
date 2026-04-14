@@ -13,9 +13,11 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
 }
 
 button,
@@ -25,7 +27,7 @@ textarea {
 }
 
 .app-shell {
-  max-width: 1200px;
+  width: min(1380px, 100%);
   margin: 0 auto;
   padding: 32px 20px 48px;
 }
@@ -65,18 +67,33 @@ textarea {
   opacity: 0.82;
 }
 
-.workspace-grid {
+.dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 20px;
+  align-items: start;
+}
+
+.assistant-column {
+  display: grid;
+  gap: 20px;
+  position: sticky;
+  top: 20px;
+}
+
+.results-column {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
 }
 
 .panel {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(26, 63, 96, 0.1);
   border-radius: 20px;
   padding: 22px;
   box-shadow: 0 16px 32px rgba(25, 43, 61, 0.08);
+  min-width: 0;
 }
 
 .panel-header {
@@ -96,7 +113,8 @@ textarea {
 }
 
 .form-grid input,
-.form-grid textarea {
+.form-grid textarea,
+.chat-form textarea {
   margin-top: 6px;
   border: 1px solid #c7d5e1;
   border-radius: 14px;
@@ -117,6 +135,17 @@ button {
   background: linear-gradient(135deg, #19747e, #2e9cbf);
   color: white;
   cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+  transform: none;
 }
 
 .risk-pills,
@@ -133,6 +162,7 @@ button {
   border-radius: 16px;
   background: #f4f8fb;
   border: 1px solid #dae5ee;
+  overflow-wrap: anywhere;
 }
 
 .panel-subsection {
@@ -140,7 +170,79 @@ button {
 }
 
 .graph-panel {
-  margin-top: 20px;
+  margin-top: 0;
+}
+
+.chat-panel {
+  min-height: 540px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.chat-log {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chat-bubble {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f4f8fb;
+  border: 1px solid #dae5ee;
+}
+
+.chat-bubble p {
+  margin: 8px 0 0;
+}
+
+.chat-bubble.user {
+  background: #e8f6fb;
+  border-color: #b9dfea;
+}
+
+.chat-bubble.assistant {
+  background: #fffaf0;
+  border-color: #ecd9ad;
+}
+
+.chat-bubble.loading {
+  background: #f4f9ff;
+  border-color: #cfe2ea;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2e9cbf;
+  animation: pulse 1.1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.chat-placeholder {
+  color: #4f6478;
+}
+
+.chat-form {
+  display: grid;
+  gap: 12px;
 }
 
 .algorithm-card {
@@ -185,6 +287,7 @@ button {
   border-radius: 14px;
   background: #f4f8fb;
   border: 1px solid #dae5ee;
+  overflow-wrap: anywhere;
 }
 
 .graph-svg {
@@ -198,10 +301,15 @@ button {
 
 .graph-legend {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 14px;
   color: #4f6478;
+  font-size: 0.92rem;
+}
+
+.graph-legend button {
+  padding: 10px 14px;
   font-size: 0.92rem;
 }
 
@@ -217,9 +325,31 @@ button {
   color: #b42318;
 }
 
-@media (max-width: 900px) {
-  .workspace-grid,
+@keyframes pulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.55;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1000px) {
+  .dashboard-grid,
   .two-up {
     grid-template-columns: 1fr;
+  }
+
+  .assistant-column {
+    position: static;
+  }
+
+  .chat-panel {
+    min-height: 420px;
   }
 }

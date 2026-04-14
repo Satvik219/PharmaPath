@@ -5,8 +5,14 @@ const statusEl = document.getElementById("status");
 const formEl = document.getElementById("interaction-form");
 const resultsPanel = document.getElementById("results-panel");
 const graphPanel = document.getElementById("graph-panel");
+const chatLog = document.getElementById("chat-log");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
 
 let authToken = localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+let currentResult = null;
+let currentChatSessionId = "";
+let loadingBubble = null;
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -42,7 +48,7 @@ async function verifyExistingToken() {
 
   try {
     await apiFetch("/interactions/severity-levels", { method: "GET" });
-    setStatus("Connected to Flask backend. Ready for interaction analysis.");
+    setStatus("Connected to backend. Ready for interaction analysis.");
     return true;
   } catch (error) {
     authToken = "";
@@ -68,7 +74,7 @@ async function bootstrapSession() {
   });
   authToken = data.jwt_token;
   localStorage.setItem(TOKEN_STORAGE_KEY, authToken);
-  setStatus("Connected to Flask backend. Ready for interaction analysis.");
+  setStatus("Connected to backend. Ready for interaction analysis.");
 }
 
 function parseFormPayload() {
@@ -93,25 +99,40 @@ function parseFormPayload() {
 }
 
 function renderResults(result) {
-  const summary = result.user_summary;
-  const astarBlock = result.astar_summary.result
+  const summaryTitle =
+    result.severity === "high"
+      ? "High-risk regimen detected"
+      : result.severity === "moderate"
+        ? "Moderate interaction risk detected"
+        : "No major interaction signal detected";
+
+  const summaryAction =
+    result.recommendations?.[0] ||
+    "Review the explanation and discuss medication changes with a clinician before acting.";
+
+  const summaryWhy =
+    result.explanation ||
+    "The analysis combines direct interaction severity, patient-specific risk factors, and multi-drug amplification.";
+
+  const astarBlock = result.safe_alternatives?.[0]
     ? `
       <div class="algorithm-card">
         <h3>What A* search did</h3>
-        <p>${result.astar_summary.summary}</p>
-        <p><strong>Current medicines:</strong> ${result.astar_summary.result.current_medications.join(", ")}</p>
-        <p><strong>Suggested lower-risk option:</strong> ${result.astar_summary.result.suggested_medications.join(", ")}</p>
-        <p><strong>Estimated risk score of suggestion:</strong> ${result.astar_summary.result.estimated_risk_score}</p>
-        <p>${result.astar_summary.result.explanation}</p>
+        <p>The search engine tested alternative regimens and ranked lower-risk substitutions.</p>
+        <p><strong>Current medicines:</strong> ${result.drugs.join(", ")}</p>
+        <p><strong>Suggested lower-risk option:</strong> ${result.safe_alternatives[0].medication_names.join(", ")}</p>
+        <p><strong>Estimated risk score of suggestion:</strong> ${result.safe_alternatives[0].total_risk_score}</p>
+        <p>${result.safe_alternatives[0].path_explanation}</p>
       </div>
     `
     : `
       <div class="algorithm-card">
         <h3>What A* search did</h3>
-        <p>${result.astar_summary.summary}</p>
+        <p>No lower-risk substitution was confidently identified from the current dataset.</p>
       </div>
     `;
-  const resolvedCards = result.resolved_medications.length
+
+  const resolvedCards = result.resolved_medications?.length
     ? result.resolved_medications
         .map(
           (item) => `
@@ -123,18 +144,18 @@ function renderResults(result) {
         .join("")
     : "<p>No medicines could be matched.</p>";
 
-  const unmatchedBlock = result.unmatched_medications.length
-    ? `<p><strong>Not recognized:</strong> ${result.unmatched_medications.join(", ")}. Please check the spelling or ask a pharmacist.</p>`
+  const unmatchedBlock = result.unmatched_medications?.length
+    ? `<p><strong>Not recognized:</strong> ${result.unmatched_medications.join(", ")}.</p>`
     : "";
 
-  const riskCards = result.risk_pairs.length
-    ? result.risk_pairs
+  const riskCards = result.interactions?.length
+    ? result.interactions
         .map(
           (pair) => `
             <article class="pill-card">
               <strong>${pair.source_name} + ${pair.target_name}</strong>
               <span>${pair.type}</span>
-              <span>Risk score: ${pair.adjusted_score ?? pair.score}</span>
+              <span>Risk score: ${pair.final_score ?? pair.base_score ?? pair.score}</span>
               <p>${pair.description}</p>
             </article>
           `
@@ -142,8 +163,8 @@ function renderResults(result) {
         .join("")
     : "<p>No direct interaction warning was found for the medicines that were recognized.</p>";
 
-  const flagCards = result.bayesian_flags.length
-    ? result.bayesian_flags
+  const flagCards = result.interactions_overview?.bayesian_flags?.length
+    ? result.interactions_overview.bayesian_flags
         .map(
           (flag) =>
             `<p>Your personal risk was increased by ${flag.delta} because of ${flag.reasons.join(", ")}.</p>`
@@ -151,7 +172,21 @@ function renderResults(result) {
         .join("")
     : "<p>No patient-specific escalations were applied.</p>";
 
-  const alternativeCards = result.safe_alternatives.length
+  const chainCards = result.interactions_overview?.multi_hop_chains?.length
+    ? result.interactions_overview.multi_hop_chains
+        .map(
+          (chain) => `
+            <article class="alternative-card">
+              <strong>${chain.path_names.join(" -> ")}</strong>
+              <span>Chain score: ${chain.combined_score}</span>
+              <p>${chain.mechanism}</p>
+            </article>
+          `
+        )
+        .join("")
+    : "<p>No multi-hop interaction chains were detected in this regimen.</p>";
+
+  const alternativeCards = result.safe_alternatives?.length
     ? result.safe_alternatives
         .map(
           (option) => `
@@ -165,17 +200,24 @@ function renderResults(result) {
         .join("")
     : "<p>No severe pair triggered an alternative search.</p>";
 
+  const aiMeta = result.ai_meta || {};
+  const aiMessage =
+    aiMeta.source === "gemini"
+      ? `Gemini response active via ${aiMeta.used_model}.`
+      : `Using local fallback reasoning${aiMeta.error ? ` because Gemini failed: ${aiMeta.error}` : "."}`;
+
   resultsPanel.innerHTML = `
     <div class="panel-header">
       <p class="eyebrow">Final Result</p>
-      <h2>${summary.title}</h2>
+      <h2>${summaryTitle}</h2>
     </div>
     <div class="decision-card">
       <h3>What you should do now</h3>
-      <p>${summary.action}</p>
+      <p>${summaryAction}</p>
       <h3>Why</h3>
-      <p>${summary.why}</p>
-      <p><strong>Overall risk:</strong> ${result.overall_risk}</p>
+      <p>${summaryWhy}</p>
+      <p><strong>Overall risk:</strong> ${result.severity} (${result.risk_score}/100)</p>
+      <p><strong>AI status:</strong> ${aiMessage}</p>
       ${unmatchedBlock}
     </div>
     ${astarBlock}
@@ -187,6 +229,10 @@ function renderResults(result) {
     <div class="panel-subsection">
       <h3>Personal factors that changed the result</h3>
       ${flagCards}
+    </div>
+    <div class="panel-subsection">
+      <h3>Multi-drug interaction chains</h3>
+      ${chainCards}
     </div>
     <div class="panel-subsection">
       <h3>Possible lower-risk options to ask about</h3>
@@ -216,7 +262,7 @@ function renderGraph(result) {
 }
 
 function buildComparisonGraphSvg(graph) {
-  if (!graph.nodes.length) {
+  if (!graph?.nodes?.length) {
     return "<p>No graph data is available for this result.</p>";
   }
 
@@ -249,7 +295,7 @@ function buildComparisonGraphSvg(graph) {
           ? "#2e9cbf"
           : edge.kind === "same-medicine"
             ? "#6c8a5c"
-            : edge.severity === "contraindicated"
+            : String(edge.severity || "").toLowerCase() === "contraindicated"
               ? "#c24d3f"
               : "#c8952d";
       const dash = edge.kind === "interaction" ? "0" : "8 6";
@@ -293,6 +339,135 @@ function buildComparisonGraphSvg(graph) {
   `;
 }
 
+function appendChatBubble(role, message) {
+  if (chatLog.querySelector(".chat-placeholder")) {
+    chatLog.innerHTML = "";
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${role}`;
+  bubble.innerHTML = `<strong>${role === "user" ? "You" : "PharmaPath"}</strong><p>${message}</p>`;
+  chatLog.appendChild(bubble);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function showChatLoading() {
+  if (loadingBubble) {
+    return;
+  }
+
+  if (chatLog.querySelector(".chat-placeholder")) {
+    chatLog.innerHTML = "";
+  }
+
+  loadingBubble = document.createElement("div");
+  loadingBubble.className = "chat-bubble assistant loading";
+  loadingBubble.innerHTML = `
+    <strong>PharmaPath</strong>
+    <div class="typing-indicator" aria-label="Loading response">
+      <span></span><span></span><span></span>
+    </div>
+  `;
+  chatLog.appendChild(loadingBubble);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function hideChatLoading() {
+  if (!loadingBubble) {
+    return;
+  }
+
+  loadingBubble.remove();
+  loadingBubble = null;
+}
+
+function clearSuggestedQuestionRows() {
+  chatLog.querySelectorAll(".graph-legend").forEach((node) => node.remove());
+}
+
+function renderSuggestedQuestions(questions = []) {
+  clearSuggestedQuestionRows();
+  if (!questions.length) {
+    return;
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "graph-legend";
+  actions.innerHTML = questions
+    .map((question) => `<button type="button" data-question="${question.replace(/"/g, "&quot;")}">${question}</button>`)
+    .join("");
+  chatLog.appendChild(actions);
+
+  actions.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      chatInput.value = button.dataset.question || "";
+      chatForm.requestSubmit();
+    });
+  });
+}
+
+async function askQuestion(question) {
+  if (!currentResult) {
+    setStatus("Run an interaction check before asking follow-up questions.", true);
+    return;
+  }
+
+  const submitButton = chatForm.querySelector("button");
+  appendChatBubble("user", question);
+  setStatus("PharmaPath is thinking...");
+  showChatLoading();
+  chatInput.disabled = true;
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
+
+  const medications = document
+    .getElementById("medications")
+    .value.split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const lowerQuestion = question.toLowerCase();
+  const removeMatch = lowerQuestion.match(/remove\s+([a-z0-9\- ]+)/i);
+  const addMatch = lowerQuestion.match(/add\s+([a-z0-9\- ]+)/i);
+
+  try {
+    const result = await apiFetch("/interactions/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: currentChatSessionId || undefined,
+        message: question,
+        drugs: currentResult.drugs,
+        current_drugs: medications,
+        remove: removeMatch ? removeMatch[1].trim() : undefined,
+        add: addMatch ? addMatch[1].trim() : undefined,
+        patient: parseFormPayload().patient
+      })
+    });
+
+    currentChatSessionId = result.session_id || currentChatSessionId;
+    hideChatLoading();
+    appendChatBubble("assistant", result.chat_response || "I could not generate a response.");
+    renderSuggestedQuestions(result.suggested_questions || []);
+    setStatus(
+      result.ai_meta?.source === "gemini"
+        ? `Gemini answered using ${result.ai_meta.used_model}.`
+        : `Used local fallback reasoning${result.ai_meta?.error ? ` because Gemini failed: ${result.ai_meta.error}` : "."}`,
+      result.ai_meta?.source !== "gemini"
+    );
+  } catch (error) {
+    hideChatLoading();
+    appendChatBubble("assistant", `I hit an error while answering: ${error.message}`);
+    setStatus(error.message, true);
+  } finally {
+    chatInput.disabled = false;
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+    chatInput.focus();
+  }
+}
+
 formEl.addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus("Checking the medicines and preparing a final recommendation...");
@@ -302,12 +477,33 @@ formEl.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(parseFormPayload())
     });
+    currentResult = result;
+    currentChatSessionId = "";
+    hideChatLoading();
     renderResults(result);
     renderGraph(result);
-    setStatus("Analysis complete.");
+    chatLog.innerHTML = "";
+    appendChatBubble("assistant", result.explanation || "Analysis complete.");
+    renderSuggestedQuestions(result.suggested_questions || []);
+    setStatus(
+      result.ai_meta?.source === "gemini"
+        ? `Analysis complete with Gemini using ${result.ai_meta.used_model}.`
+        : `Analysis complete with local fallback reasoning${result.ai_meta?.error ? ` because Gemini failed: ${result.ai_meta.error}` : "."}`,
+      result.ai_meta?.source !== "gemini"
+    );
   } catch (error) {
     setStatus(error.message, true);
   }
+});
+
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const question = chatInput.value.trim();
+  if (!question) {
+    return;
+  }
+  chatInput.value = "";
+  await askQuestion(question);
 });
 
 bootstrapSession().catch((error) => {
